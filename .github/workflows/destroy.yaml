@@ -1,4 +1,4 @@
-name: Deploy
+name: Destroy
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ env:
   TF_VAR_encryption_passphrase: ${{ secrets.TF_ENCRYPTION_PASSPHRASE }}
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,7 +23,7 @@ jobs:
           chmod 600 secrets/deploy-key
           ssh-keygen -y -f secrets/deploy-key > secrets/deploy-key.pub
           echo "TF_VAR_ssh_public_key=$(cat secrets/deploy-key.pub)" >> $GITHUB_ENV
-      - run: nix develop --command just ci-deploy
+      - run: nix develop --command just ci-destroy
       - name: Commit state
         run: |
           git config user.name "github-actions[bot]"
@@ -31,6 +31,3 @@ jobs:
           git add terraform/terraform.tfstate
           git diff --staged --quiet || git commit -m "Update terraform state"
           git push
-      - run: nix develop --command just wait
-      - run: nix develop --command just bootstrap
-      - run: nix develop --command just rebuild
