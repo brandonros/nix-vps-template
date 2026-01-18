@@ -1,2 +1,5 @@
 .DS_Store
 .just-base.just
+assets/deploy-key
+.terraform/
+.terraform.tfstate.lock.info

@@ -1,5 +1,28 @@
 # Vultr VPS module - reusable across projects
 
+terraform {
+  encryption {
+    key_provider "pbkdf2" "main" {
+      passphrase = var.encryption_passphrase
+    }
+    method "aes_gcm" "main" {
+      keys = key_provider.pbkdf2.main
+    }
+    state {
+      method = method.aes_gcm.main
+    }
+    plan {
+      method = method.aes_gcm.main
+    }
+  }
+}
+
+variable "encryption_passphrase" {
+  type        = string
+  sensitive   = true
+  description = "Passphrase for encrypting state and plan files"
+}
+
 variable "hostname" {
   type        = string
   default     = "nixos-vps"
