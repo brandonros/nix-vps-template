@@ -57,7 +57,7 @@ ssh:
 
 # Destroy
 destroy:
-    cd terraform && tofu destroy
+    cd terraform && tofu init -upgrade && tofu destroy
 
 # Full deploy: infra + NixOS
 go: deploy wait bootstrap rebuild
@@ -68,7 +68,7 @@ ci-deploy:
     cd terraform && tofu init -upgrade && tofu apply -auto-approve
 
 ci-destroy:
-    cd terraform && tofu destroy -auto-approve
+    cd terraform && tofu init -upgrade && tofu destroy -auto-approve
 
 ci-go: ci-deploy wait bootstrap rebuild
     @echo "Ready: $(just server-ip)"
