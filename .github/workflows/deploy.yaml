@@ -22,7 +22,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Setup SSH key
         run: |
           mkdir -p secrets
@@ -30,9 +29,7 @@ jobs:
           chmod 600 secrets/deploy-key
           ssh-keygen -y -f secrets/deploy-key > secrets/deploy-key.pub
           echo "TF_VAR_ssh_public_key=$(cat secrets/deploy-key.pub)" >> $GITHUB_ENV
-
-      - run: nix develop --command just ci-go
-
+      - run: nix develop --command just ci-deploy
       - name: Commit state
         run: |
           git config user.name "github-actions[bot]"
@@ -40,6 +37,9 @@ jobs:
           git add terraform/terraform.tfstate
           git diff --staged --quiet || git commit -m "Update terraform state"
           git push
+      - run: nix develop --command just wait
+      - run: nix develop --command just bootstrap
+      - run: nix develop --command just rebuild
 
   destroy:
     runs-on: ubuntu-latest

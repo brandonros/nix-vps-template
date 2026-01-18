@@ -67,6 +67,15 @@
       system.stateVersion = "25.11";
     };
 
+    nixosConfigurations.nixos-vps = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        (self.nixosModules.default {
+          sshPubKey = builtins.readFile ./secrets/deploy-key.pub;
+        })
+      ];
+    };
+
     devShells = forAllSystems (system:
       let pkgs = nixpkgs.legacyPackages.${system};
       in {

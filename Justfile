@@ -57,7 +57,7 @@ destroy:
     cd terraform && tofu destroy
 
 # Full deploy: infra + NixOS
-go: deploy wait bootstrap
+go: deploy wait bootstrap rebuild
     @echo "Ready: $(just server-ip)"
 
 # CI variants
@@ -67,5 +67,13 @@ ci-deploy:
 ci-destroy:
     cd terraform && tofu destroy -auto-approve
 
-ci-go: ci-deploy wait bootstrap
+ci-go: ci-deploy wait bootstrap rebuild
     @echo "Ready: $(just server-ip)"
+
+# Rebuild NixOS on existing server
+rebuild:
+    #!/usr/bin/env bash
+    server_ip=$(just server-ip)
+    NIX_SSHOPTS="-i secrets/deploy-key -o StrictHostKeyChecking=no" \
+    nixos-rebuild switch --flake "{{flake_target}}" \
+        --target-host "root@${server_ip}"
