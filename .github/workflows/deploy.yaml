@@ -2,6 +2,16 @@ name: Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      repo:
+        description: 'GitHub repo (e.g., brandonros/ez3proxy)'
+        default: 'brandonros/nix-vps-template'
+      flake:
+        description: 'Flake name (e.g., ez3proxy)'
+        default: 'nixos-vps'
+      branch:
+        description: 'Branch (optional)'
+        default: ''
 
 env:
   VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
@@ -22,6 +32,7 @@ jobs:
           echo "${{ secrets.DEPLOY_KEY }}" > assets/deploy-key
           chmod 600 assets/deploy-key
           echo "TF_VAR_ssh_public_key=$(cat assets/deploy-key.pub)" >> $GITHUB_ENV
+      # create vm
       - run: nix develop --command just ci-deploy
       - name: Commit state
         run: |
@@ -30,7 +41,11 @@ jobs:
           git add terraform/terraform.tfstate
           git diff --staged --quiet || git commit -m "Update terraform state"
           git push
+      # wait for ssh
       - run: nix develop --command just wait
+      # convert from debian to nixos
       - run: nix develop --command just bootstrap
+      # wait for ssh
       - run: nix develop --command just wait
-      - run: nix develop --command just rebuild
+      # nixos-rebuild against target flake
+      - run: nix develop --command just rebuild '${{ inputs.repo }}' '${{ inputs.flake }}' '${{ inputs.branch }}'

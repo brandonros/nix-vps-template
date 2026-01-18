@@ -2,10 +2,6 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-flake_target := env_var_or_default("FLAKE_TARGET", ".#nixos-vps")
-github_repo := env_var_or_default("GITHUB_REPO", "brandonros/nix-vps-template")
-github_branch := env_var_or_default("GITHUB_BRANCH", "simple")
-
 default:
     @just --list
 
@@ -47,7 +43,7 @@ bootstrap:
         exit 0
     fi
     nix run github:nix-community/nixos-anywhere -- \
-        --flake "{{flake_target}}" \
+        --flake ".#nixos-vps" \
         --target-host "root@${server_ip}" \
         -i assets/deploy-key
 
@@ -74,17 +70,17 @@ ci-go: ci-deploy wait bootstrap wait rebuild
     @echo "Ready: $(just server-ip)"
 
 # Rebuild NixOS on existing server (fetches flake from GitHub)
-rebuild:
+# Usage: just rebuild [repo] [flake] [branch]
+# Examples:
+#   just rebuild                                    # uses defaults
+#   just rebuild brandonros/ez3proxy ez3proxy      # switch to ez3proxy
+#   just rebuild brandonros/ez3proxy ez3proxy main # with specific branch
+rebuild repo="brandonros/nix-vps-template" flake="nixos-vps" branch="":
     #!/usr/bin/env bash
-    if [ -z "{{github_repo}}" ]; then
-        echo "Error: Set GITHUB_REPO env var (e.g., GITHUB_REPO=username/repo just rebuild)"
-        exit 1
-    fi
     server_ip=$(just server-ip)
-    flake_name=$(echo "{{flake_target}}" | sed 's/.*#//')
     branch_part=""
-    if [ -n "{{github_branch}}" ]; then
-        branch_part="/{{github_branch}}"
+    if [ -n "{{branch}}" ]; then
+        branch_part="/{{branch}}"
     fi
     ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
-        "nixos-rebuild switch --refresh --flake github:{{github_repo}}${branch_part}#${flake_name}"
+        "nixos-rebuild switch --refresh --flake github:{{repo}}${branch_part}#{{flake}}"
