@@ -1,15 +1,4 @@
-terraform {
-  required_providers {
-    vultr = {
-      source  = "vultr/vultr"
-      version = "~> 2.19"
-    }
-  }
-}
-
-provider "vultr" {
-  # VULTR_API_KEY comes from env var
-}
+# Vultr VPS module - reusable across projects
 
 variable "hostname" {
   type        = string
@@ -41,30 +30,29 @@ variable "os_id" {
   description = "Vultr OS ID (2136 = Debian 12 Bookworm)"
 }
 
-variable "ssh_public_key_path" {
+variable "ssh_public_key" {
   type        = string
-  default     = "../secrets/deploy-key.pub"
-  description = "Path to SSH public key file"
+  description = "SSH public key content"
 }
 
 resource "vultr_ssh_key" "default" {
   name    = "${var.hostname}-key"
-  ssh_key = file("${path.module}/${var.ssh_public_key_path}")
+  ssh_key = var.ssh_public_key
 }
 
-resource "vultr_instance" "server1" {
-  plan              = var.plan
-  region            = var.region
-  os_id             = var.os_id
-  hostname          = var.hostname
-  ssh_key_ids       = [vultr_ssh_key.default.id]
-  enable_ipv6       = var.enable_ipv6
+resource "vultr_instance" "server" {
+  plan        = var.plan
+  region      = var.region
+  os_id       = var.os_id
+  hostname    = var.hostname
+  ssh_key_ids = [vultr_ssh_key.default.id]
+  enable_ipv6 = var.enable_ipv6
 }
 
 output "server_id" {
-  value = vultr_instance.server1.id
+  value = vultr_instance.server.id
 }
 
 output "server_ipv4" {
-  value = vultr_instance.server1.main_ip
+  value = vultr_instance.server.main_ip
 }

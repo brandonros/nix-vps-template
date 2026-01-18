@@ -65,12 +65,27 @@ mkpasswd -m sha-512 'yourpassword' | age -r "$(cat secrets/host-key.pub)" -o sec
 
 ## Terraform
 
-Copy `terraform/` to your project and customize `terraform.tfvars`:
+Use as a module in your project:
 
 ```hcl
-hostname = "my-vps"
-region   = "atl"
-plan     = "vc2-2c-4gb"
+# terraform/main.tf
+terraform {
+  required_providers {
+    vultr = { source = "vultr/vultr", version = "~> 2.19" }
+  }
+}
+
+provider "vultr" {}
+
+module "vps" {
+  source         = "github.com/brandonros/nix-vps-template//terraform"
+  hostname       = "my-vps"
+  ssh_public_key = file("${path.root}/../secrets/deploy-key.pub")
+  # region       = "atl"
+  # plan         = "vc2-2c-4gb"
+}
+
+output "server_ipv4" { value = module.vps.server_ipv4 }
 ```
 
 ## Dev Shell
