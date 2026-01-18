@@ -10,13 +10,14 @@ on:
 
 env:
   VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.VULTR_OBJECT_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.VULTR_OBJECT_SECRET }}
+  TF_VAR_encryption_passphrase: ${{ secrets.TF_ENCRYPTION_PASSPHRASE }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event.inputs.action == 'deploy'
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
@@ -30,11 +31,29 @@ jobs:
 
       - run: nix develop --command just ci-go
 
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add terraform/terraform.tfstate
+          git diff --staged --quiet || git commit -m "Update terraform state"
+          git push
+
   destroy:
     runs-on: ubuntu-latest
     if: github.event.inputs.action == 'destroy'
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix develop --command just ci-destroy
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add terraform/terraform.tfstate
+          git diff --staged --quiet || git commit -m "Update terraform state"
+          git push
