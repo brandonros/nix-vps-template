@@ -3,6 +3,8 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 flake_target := env_var_or_default("FLAKE_TARGET", ".#nixos-vps")
+github_repo := env_var_or_default("GITHUB_REPO", "brandonros/nix-vps-template")
+github_branch := env_var_or_default("GITHUB_BRANCH", "simple")
 
 default:
     @just --list
@@ -71,11 +73,18 @@ ci-destroy:
 ci-go: ci-deploy wait bootstrap rebuild
     @echo "Ready: $(just server-ip)"
 
-# Rebuild NixOS on existing server
+# Rebuild NixOS on existing server (fetches flake from GitHub)
 rebuild:
     #!/usr/bin/env bash
+    if [ -z "{{github_repo}}" ]; then
+        echo "Error: Set GITHUB_REPO env var (e.g., GITHUB_REPO=username/repo just rebuild)"
+        exit 1
+    fi
     server_ip=$(just server-ip)
-    export SSH_PUBLIC_KEY="$(cat secrets/deploy-key.pub)"
-    NIX_SSHOPTS="-i secrets/deploy-key -o StrictHostKeyChecking=no" \
-    nix run nixpkgs#nixos-rebuild -- switch --flake "{{flake_target}}" --impure \
-        --target-host "root@${server_ip}" --build-host "root@${server_ip}"
+    flake_name=$(echo "{{flake_target}}" | sed 's/.*#//')
+    branch_part=""
+    if [ -n "{{github_branch}}" ]; then
+        branch_part="/{{github_branch}}"
+    fi
+    ssh -i secrets/deploy-key -o StrictHostKeyChecking=no "root@${server_ip}" \
+        "nixos-rebuild switch --refresh --flake github:{{github_repo}}${branch_part}#${flake_name}"
