@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [deploy, destroy]
+        default: deploy
+
+env:
+  VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.VULTR_OBJECT_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.VULTR_OBJECT_SECRET }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'deploy'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Setup keys
+        run: |
+          mkdir -p secrets
+          echo "${{ secrets.DEPLOY_KEY }}" > secrets/deploy-key
+          echo "${{ secrets.HOST_KEY }}" > secrets/host-key
+          chmod 600 secrets/deploy-key secrets/host-key
+          ssh-keygen -y -f secrets/deploy-key > secrets/deploy-key.pub
+          ssh-keygen -y -f secrets/host-key > secrets/host-key.pub
+
+      - name: Deploy
+        run: nix develop --command just ci-go
+
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'destroy'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Destroy
+        run: nix develop --command just ci-destroy
