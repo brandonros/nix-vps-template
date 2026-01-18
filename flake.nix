@@ -17,7 +17,11 @@
   outputs = { self, nixpkgs, disko, agenix, impermanence }:
     let
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+      baseJustfile = builtins.readFile ./Justfile;
     in {
+    # Base Justfile content for importing in downstream projects
+    lib.baseJustfile = baseJustfile;
+
     # Export individual modules for fine-grained control
     nixosModules = {
       base = ./nix/modules/platforms/base.nix;
@@ -51,10 +55,14 @@
           ];
           shellHook = ''
             alias terraform=tofu
+            # Write base justfile for downstream projects to import
+            cat > .just-base.just << 'JUSTFILE_EOF'
+            ${baseJustfile}
+            JUSTFILE_EOF
             echo "nix-vps-template dev shell"
             echo "  tofu: $(tofu version -json | jq -r .terraform_version)"
             echo "  just: $(just --version)"
-            echo "  age:  $(age --version)"
+            echo "  Base recipes written to .just-base.just"
           '';
         };
       });
