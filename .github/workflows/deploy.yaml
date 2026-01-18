@@ -32,4 +32,5 @@ jobs:
           git push
       - run: nix develop --command just wait
       - run: nix develop --command just bootstrap
+      - run: nix develop --command just wait
       - run: nix develop --command just rebuild
