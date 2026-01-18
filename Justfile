@@ -78,4 +78,4 @@ rebuild:
     export SSH_PUBLIC_KEY="$(cat secrets/deploy-key.pub)"
     NIX_SSHOPTS="-i secrets/deploy-key -o StrictHostKeyChecking=no" \
     nix run nixpkgs#nixos-rebuild -- switch --flake "{{flake_target}}" --impure \
-        --target-host "root@${server_ip}"
+        --target-host "root@${server_ip}" --build-host "root@${server_ip}"
