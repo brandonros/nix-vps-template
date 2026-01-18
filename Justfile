@@ -76,10 +76,14 @@ wait:
     done
     echo "SSH ready"
 
-# Bootstrap NixOS (destructive - reformats disks)
+# Bootstrap NixOS (idempotent - skips if already NixOS)
 bootstrap:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
+    if ssh -i secrets/deploy-key -o StrictHostKeyChecking=no -o ConnectTimeout=5 "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; then
+        echo "NixOS already installed, skipping bootstrap"
+        exit 0
+    fi
     echo "Installing NixOS on ${server_ip}..."
     tmp=$(mktemp -d)
     install -d -m 755 "$tmp/persist/etc/ssh"
@@ -115,6 +119,23 @@ destroy:
 # Full deploy
 go:
     just deploy
+    just wait
+    just bootstrap
+    @echo "Server ready at $(just server-ip)"
+
+# === CI (non-interactive) ===
+
+# CI deploy
+ci-deploy:
+    cd terraform && tofu init -upgrade && tofu apply -auto-approve
+
+# CI destroy
+ci-destroy:
+    cd terraform && tofu destroy -auto-approve
+
+# CI full deploy
+ci-go:
+    just ci-deploy
     just wait
     just bootstrap
     @echo "Server ready at $(just server-ip)"
