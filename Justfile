@@ -42,7 +42,8 @@ bootstrap:
         echo "Already NixOS"
         exit 0
     fi
-    nix run github:nix-community/nixos-anywhere -- \
+    export SSH_PUBLIC_KEY="$(cat secrets/deploy-key.pub)"
+    nix run --impure github:nix-community/nixos-anywhere -- \
         --build-on-remote \
         --flake "{{flake_target}}" \
         --target-host "root@${server_ip}" \
@@ -74,6 +75,7 @@ ci-go: ci-deploy wait bootstrap rebuild
 rebuild:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
+    export SSH_PUBLIC_KEY="$(cat secrets/deploy-key.pub)"
     NIX_SSHOPTS="-i secrets/deploy-key -o StrictHostKeyChecking=no" \
-    nixos-rebuild switch --flake "{{flake_target}}" \
+    nixos-rebuild switch --flake "{{flake_target}}" --impure \
         --target-host "root@${server_ip}"

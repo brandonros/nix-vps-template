@@ -71,7 +71,7 @@
       system = "x86_64-linux";
       modules = [
         (self.nixosModules.default {
-          sshPubKey = builtins.readFile ./secrets/deploy-key.pub;
+          sshPubKey = builtins.getEnv "SSH_PUBLIC_KEY";
         })
       ];
     };
