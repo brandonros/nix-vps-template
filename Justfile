@@ -34,7 +34,7 @@ wait:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
     echo "Waiting for SSH on ${server_ip}..."
-    while ! ssh -i secrets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'echo ok' 2>/dev/null; do
+    while ! ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'echo ok' 2>/dev/null; do
         sleep 5
     done
 
@@ -42,18 +42,18 @@ wait:
 bootstrap:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
-    if ssh -i secrets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; then
+    if ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; then
         echo "Already NixOS"
         exit 0
     fi
     nix run github:nix-community/nixos-anywhere -- \
         --flake "{{flake_target}}" \
         --target-host "root@${server_ip}" \
-        -i secrets/deploy-key
+        -i assets/deploy-key
 
 # SSH into server
 ssh:
-    ssh -i secrets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip)"
+    ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip)"
 
 # Destroy
 destroy:
@@ -86,5 +86,5 @@ rebuild:
     if [ -n "{{github_branch}}" ]; then
         branch_part="/{{github_branch}}"
     fi
-    ssh -i secrets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
+    ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:{{github_repo}}${branch_part}#${flake_name}"
