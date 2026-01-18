@@ -133,9 +133,10 @@ ci-deploy:
 ci-destroy:
     cd terraform && tofu destroy -auto-approve
 
-# CI full deploy
+# CI full deploy (infra + NixOS + config)
 ci-go:
     just ci-deploy
     just wait
     just bootstrap
+    just rebuild
     @echo "Server ready at $(just server-ip)"
