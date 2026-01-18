@@ -7,7 +7,7 @@ Simple NixOS VPS template with Vultr + nixos-anywhere.
 ```bash
 nix develop
 just keygen   # generate SSH key
-just go       # deploy + install NixOS
+just go       # deploy + wait + bootstrap + rebuild
 just ssh      # connect
 just destroy  # tear down
 ```

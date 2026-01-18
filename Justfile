@@ -15,8 +15,10 @@ keygen:
     if [ -f secrets/deploy-key ]; then
         echo "Key exists: secrets/deploy-key"
     else
-        mkdir -p secrets
+        mkdir -p secrets assets
         ssh-keygen -t ed25519 -f secrets/deploy-key -N ""
+        cp secrets/deploy-key.pub assets/deploy-key.pub
+        echo "Public key: assets/deploy-key.pub (commit this)"
     fi
 
 # Get server IP
@@ -44,9 +46,7 @@ bootstrap:
         echo "Already NixOS"
         exit 0
     fi
-    export SSH_PUBLIC_KEY="$(cat secrets/deploy-key.pub)"
-    nix run --impure github:nix-community/nixos-anywhere -- \
-        --build-on-remote \
+    nix run github:nix-community/nixos-anywhere -- \
         --flake "{{flake_target}}" \
         --target-host "root@${server_ip}" \
         -i secrets/deploy-key
@@ -60,7 +60,7 @@ destroy:
     cd terraform && tofu init -upgrade && tofu destroy
 
 # Full deploy: infra + NixOS
-go: deploy wait bootstrap rebuild
+go: deploy wait bootstrap wait rebuild
     @echo "Ready: $(just server-ip)"
 
 # CI variants
@@ -70,7 +70,7 @@ ci-deploy:
 ci-destroy:
     cd terraform && tofu init -upgrade && tofu destroy -auto-approve
 
-ci-go: ci-deploy wait bootstrap rebuild
+ci-go: ci-deploy wait bootstrap wait rebuild
     @echo "Ready: $(just server-ip)"
 
 # Rebuild NixOS on existing server (fetches flake from GitHub)
