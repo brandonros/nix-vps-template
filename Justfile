@@ -63,7 +63,7 @@ ci-go: ci-deploy wait rebuild
 #   just rebuild                                    # uses defaults
 #   just rebuild brandonros/ez3proxy ez3proxy      # switch to ez3proxy
 #   just rebuild brandonros/ez3proxy ez3proxy main # with specific branch
-rebuild repo="brandonros/nix-vps-template" flake="nixos-vps" branch="":
+rebuild repo="brandonros/nix-vps-template" flake="default" branch="":
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
     branch_part=""
