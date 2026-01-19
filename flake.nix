@@ -9,20 +9,15 @@
     let
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
     in {
-      # Reusable modules - downstream projects import these
-      nixosModules.default = { sshPubKey, hostname ? "nixos-vps" }:
-        import ./modules/runtime.nix { inherit sshPubKey hostname; };
+      # Reusable module - includes hardware + runtime
+      nixosModules.default = ./modules;
 
-      nixosModules.hardware = import ./modules/hardware.nix;
-
-      # Complete config (hardware + runtime)
+      # Example config for this repo
       nixosConfigurations.default = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
-          ./modules/hardware.nix
-          (import ./modules/runtime.nix {
-            sshPubKey = builtins.readFile ./keys/deploy-key.pub;
-          })
+          self.nixosModules.default
+          { vps.sshPubKey = builtins.readFile ./keys/deploy-key.pub; }
         ];
       };
 
