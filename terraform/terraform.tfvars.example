@@ -1,4 +1,0 @@
-# Copy to terraform.tfvars and customize
-hostname = "my-vps"
-region   = "atl"
-plan     = "vc2-2c-4gb"

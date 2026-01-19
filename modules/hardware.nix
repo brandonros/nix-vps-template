@@ -1,4 +1,4 @@
-# Generic VPS hardware config using labels
+# Vultr VPS hardware config
 { modulesPath, ... }: {
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
 
@@ -18,13 +18,14 @@
   ];
   boot.tmp.cleanOnBoot = true;
 
+  # Vultr standard layout: vda1=EFI, vda2=root
   fileSystems."/" = {
-    device = "/dev/disk/by-label/NIXROOT";
+    device = "/dev/vda2";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-label/NIXBOOT";
+    device = "/dev/vda1";
     fsType = "vfat";
   };
 
