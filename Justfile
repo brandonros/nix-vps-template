@@ -25,14 +25,15 @@ server-ip:
 deploy:
     cd terraform && tofu init -upgrade && tofu apply
 
-# Wait for SSH
+# Wait for NixOS (not just SSH - waits for nixos-infect to complete)
 wait:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
-    echo "Waiting for SSH on ${server_ip}..."
-    while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'echo ok' 2>/dev/null; do
+    echo "Waiting for NixOS on ${server_ip}..."
+    while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; do
         sleep 5
     done
+    echo "NixOS ready"
 
 # SSH into server
 ssh:
