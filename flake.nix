@@ -14,14 +14,10 @@
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
       sshPubKey = builtins.readFile ./assets/deploy-key.pub;
     in {
-      # Reusable module for runtime config
-      nixosModules.default = import ./modules/base.nix;
-
-      # Example NixOS configuration (for nixos-rebuild)
-      nixosConfigurations.nixos-vps = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [ (self.nixosModules.default { inherit sshPubKey; }) ];
-      };
+      # Reusable module for runtime config (SSH, users, network, nix settings)
+      # Projects import this - no boot/filesystem config (snapshot handles that)
+      nixosModules.default = { sshPubKey, hostname ? "nixos-vps" }:
+        import ./modules/runtime.nix { inherit sshPubKey hostname; };
 
       # Dev shell
       devShells = forAllSystems (system:
