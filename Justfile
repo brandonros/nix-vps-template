@@ -72,14 +72,3 @@ rebuild repo="brandonros/nix-vps-template" flake="default" branch="":
     fi
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:{{repo}}${branch_part}#{{flake}}"
-
-# Dry-run rebuild (build + show what would change, no activation)
-rebuild-dry repo="brandonros/nix-vps-template" flake="default" branch="":
-    #!/usr/bin/env bash
-    server_ip=$(just server-ip)
-    branch_part=""
-    if [ -n "{{branch}}" ]; then
-        branch_part="/{{branch}}"
-    fi
-    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
-        "nixos-rebuild dry-activate --refresh --flake github:{{repo}}${branch_part}#{{flake}}"
