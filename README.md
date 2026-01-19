@@ -1,6 +1,6 @@
 # nix-vps-template
 
-Simple NixOS VPS template with Vultr + nixos-anywhere.
+Simple NixOS VPS template with Vultr
 
 ## Quick Start
 
