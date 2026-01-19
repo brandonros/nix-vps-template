@@ -18,11 +18,9 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Setup SSH key
         run: |
-          mkdir -p secrets
-          echo "${{ secrets.DEPLOY_KEY }}" > secrets/deploy-key
-          chmod 600 secrets/deploy-key
-          ssh-keygen -y -f secrets/deploy-key > secrets/deploy-key.pub
-          echo "TF_VAR_ssh_public_key=$(cat secrets/deploy-key.pub)" >> $GITHUB_ENV
+          mkdir -p keys
+          echo "${{ secrets.DEPLOY_KEY }}" > keys/deploy-key
+          chmod 600 keys/deploy-key
       - run: nix develop --command just ci-destroy
       - name: Commit state
         run: |

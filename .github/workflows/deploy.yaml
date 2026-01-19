@@ -28,9 +28,9 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Setup SSH key
         run: |
-          mkdir -p assets
-          echo "${{ secrets.DEPLOY_KEY }}" > assets/deploy-key
-          chmod 600 assets/deploy-key
+          mkdir -p keys
+          echo "${{ secrets.DEPLOY_KEY }}" > keys/deploy-key
+          chmod 600 keys/deploy-key
       # create vm from nixos snapshot
       - run: nix develop --command just ci-deploy
       - name: Commit state
