@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: 'GitHub repo (e.g., brandonros/ez3proxy)'
+        description: 'GitHub repo'
         default: 'brandonros/nix-vps-template'
       flake:
-        description: 'Flake name (e.g., ez3proxy)'
-        default: 'nixos-vps'
+        description: 'Flake name'
+        default: 'default'
       branch:
         description: 'Branch (optional)'
         default: ''
