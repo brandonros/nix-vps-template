@@ -8,13 +8,13 @@ default:
 # Generate SSH key (if needed)
 keygen:
     #!/usr/bin/env bash
-    if [ -f secrets/deploy-key ]; then
-        echo "Key exists: secrets/deploy-key"
+    if [ -f keys/deploy-key ]; then
+        echo "Key exists: keys/deploy-key"
     else
-        mkdir -p secrets assets
-        ssh-keygen -t ed25519 -f secrets/deploy-key -N ""
-        cp secrets/deploy-key.pub assets/deploy-key.pub
-        echo "Public key: assets/deploy-key.pub (commit this)"
+        mkdir -p keys
+        ssh-keygen -t ed25519 -f keys/deploy-key -N ""
+        echo "Created: keys/deploy-key (private, gitignored)"
+        echo "Created: keys/deploy-key.pub (public, commit this)"
     fi
 
 # Get server IP
@@ -30,13 +30,13 @@ wait:
     #!/usr/bin/env bash
     server_ip=$(just server-ip)
     echo "Waiting for SSH on ${server_ip}..."
-    while ! ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'echo ok' 2>/dev/null; do
+    while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'echo ok' 2>/dev/null; do
         sleep 5
     done
 
 # SSH into server
 ssh:
-    ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip)"
+    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip)"
 
 # Destroy
 destroy:
@@ -69,5 +69,5 @@ rebuild repo="brandonros/nix-vps-template" flake="nixos-vps" branch="":
     if [ -n "{{branch}}" ]; then
         branch_part="/{{branch}}"
     fi
-    ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
+    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:{{repo}}${branch_part}#{{flake}}"

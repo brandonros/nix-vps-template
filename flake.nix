@@ -12,7 +12,7 @@
   outputs = { self, nixpkgs, nixos-generators }:
     let
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      sshPubKey = builtins.readFile ./assets/deploy-key.pub;
+      sshPubKey = builtins.readFile ./keys/deploy-key.pub;
     in {
       # Reusable module for runtime config (SSH, users, network, nix settings)
       # Projects import this - no boot/filesystem config (snapshot handles that)
