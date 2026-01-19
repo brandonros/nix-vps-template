@@ -1,0 +1,39 @@
+name: Build NixOS Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'assets/deploy-key.pub'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build image
+        run: nix build .#vultr-image -L
+
+      - name: Compress image
+        run: |
+          # Find the raw image (might be .img or .raw)
+          ls -la result/
+          img=$(find result/ -name "*.img" -o -name "*.raw" | head -1)
+          cp "$img" nixos-base.raw
+          xz -9 -T0 nixos-base.raw
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create release if it doesn't exist
+          gh release create base --title "Base NixOS Image" --notes "Auto-generated NixOS base image for Vultr" || true
+          # Upload (overwrite if exists)
+          gh release upload base nixos-base.raw.xz --clobber

@@ -7,9 +7,13 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, disko }:
+  outputs = { self, nixpkgs, disko, nixos-generators }:
     let
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
     in {
@@ -83,5 +87,39 @@
           packages = [ pkgs.opentofu pkgs.just ];
         };
       });
+
+    # Pre-built Vultr image (raw-efi format)
+    packages.x86_64-linux.vultr-image = nixos-generators.nixosGenerate {
+      system = "x86_64-linux";
+      format = "raw-efi";
+      modules = [
+        ({ lib, ... }: {
+          # Boot
+          boot.loader.systemd-boot.enable = true;
+          boot.loader.efi.canTouchEfiVariables = true;
+          boot.initrd.availableKernelModules = [ "virtio_pci" "virtio_blk" "virtio_scsi" "ahci" "sd_mod" ];
+
+          # Network
+          networking.hostName = "nixos-vps";
+          networking.useDHCP = true;
+          networking.firewall.allowedTCPPorts = [ 22 ];
+
+          # Users - SSH key only
+          users.users.root.openssh.authorizedKeys.keys = [ (builtins.readFile ./assets/deploy-key.pub) ];
+
+          # SSH
+          services.openssh = {
+            enable = true;
+            settings.PermitRootLogin = "prohibit-password";
+            settings.PasswordAuthentication = false;
+          };
+
+          # Nix settings for rebuilds
+          nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+          system.stateVersion = "25.11";
+        })
+      ];
+    };
   };
 }
