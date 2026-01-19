@@ -2,11 +2,6 @@ name: Build NixOS Image
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'flake.nix'
-      - 'flake.lock'
-      - 'assets/deploy-key.pub'
 
 jobs:
   build:
