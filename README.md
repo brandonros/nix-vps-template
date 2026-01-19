@@ -6,7 +6,7 @@ Simple NixOS VPS template with Vultr + nixos-anywhere.
 
 ```bash
 nix develop
-just keygen   # generate SSH key (commit assets/deploy-key.pub)
+just keygen   # generate SSH key (commit keys/deploy-key.pub)
 just go       # deploy + wait + bootstrap + wait + rebuild
 just ssh      # connect
 just destroy  # tear down
@@ -25,10 +25,12 @@ just destroy  # tear down
   outputs = { nixpkgs, nix-vps-template, ... }: {
     nixosConfigurations.my-vps = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { sshPubKey = builtins.readFile ./assets/deploy-key.pub; };
       modules = [
-        nix-vps-template.nixosModules.default
-        { networking.hostName = "my-vps"; }
+        (nix-vps-template.nixosModules.default {
+          sshPubKey = builtins.readFile ./keys/deploy-key.pub;
+          hostname = "my-vps";
+        })
+        ./my-app.nix  # your application config
       ];
     };
   };
