@@ -7,5 +7,9 @@ users:
       - ${ssh_pubkey}
 
 runcmd:
+  # Set filesystem labels before nixos-infect
+  - fatlabel /dev/vda1 NIXBOOT
+  - e2label /dev/vda2 NIXROOT
+  # Run nixos-infect
   - |
     curl -L https://github.com/elitak/nixos-infect/raw/master/nixos-infect | NIX_CHANNEL=nixos-25.11 bash -x 2>&1 | tee /var/log/nixos-infect.log
