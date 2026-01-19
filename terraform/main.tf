@@ -53,13 +53,25 @@ variable "os_id" {
   description = "Vultr OS ID (2136 = Debian 12 Bookworm)"
 }
 
+variable "ssh_pubkey" {
+  type        = string
+  default     = ""
+  description = "SSH public key (defaults to keys/deploy-key.pub)"
+}
+
+locals {
+  ssh_pubkey = var.ssh_pubkey != "" ? var.ssh_pubkey : trimspace(file("${path.module}/../keys/deploy-key.pub"))
+}
+
 resource "vultr_instance" "server" {
   plan        = var.plan
   region      = var.region
   os_id       = var.os_id
   hostname    = var.hostname
   enable_ipv6 = var.enable_ipv6
-  user_data   = file("${path.module}/cloud-config.yaml")
+  user_data = templatefile("${path.module}/cloud-config.yaml.tpl", {
+    ssh_pubkey = local.ssh_pubkey
+  })
 }
 
 output "server_id" {
