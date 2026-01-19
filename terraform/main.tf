@@ -1,4 +1,4 @@
-# Vultr VPS with pre-built NixOS image
+# Vultr VPS with nixos-infect
 
 terraform {
   encryption {
@@ -47,23 +47,19 @@ variable "enable_ipv6" {
   description = "Enable IPv6 on the instance"
 }
 
-variable "nixos_image_url" {
-  type        = string
-  default     = "https://github.com/brandonros/nix-vps-template/releases/download/base/nixos-base.raw.gz"
-  description = "URL to NixOS base image"
-}
-
-# Create snapshot from pre-built NixOS image
-resource "vultr_snapshot_from_url" "nixos" {
-  url = var.nixos_image_url
+variable "os_id" {
+  type        = number
+  default     = 2136
+  description = "Vultr OS ID (2136 = Debian 12 Bookworm)"
 }
 
 resource "vultr_instance" "server" {
   plan        = var.plan
   region      = var.region
-  snapshot_id = vultr_snapshot_from_url.nixos.id
+  os_id       = var.os_id
   hostname    = var.hostname
   enable_ipv6 = var.enable_ipv6
+  user_data   = file("${path.module}/cloud-config.yaml")
 }
 
 output "server_id" {
