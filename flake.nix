@@ -3,123 +3,38 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    disko = {
-      url = "github:nix-community/disko";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, disko, nixos-generators }:
+  outputs = { self, nixpkgs, nixos-generators }:
     let
       forAllSystems = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+      sshPubKey = builtins.readFile ./assets/deploy-key.pub;
     in {
-    nixosModules.default = { sshPubKey, hostname ? "nixos-vps", ... }: {
-      imports = [ disko.nixosModules.disko ];
+      # Reusable module for runtime config
+      nixosModules.default = import ./modules/base.nix;
 
-      # Disk layout (Vultr/KVM)
-      disko.devices.disk.main = {
-        device = "/dev/vda";
-        type = "disk";
-        content = {
-          type = "gpt";
-          partitions = {
-            ESP = {
-              size = "512M";
-              type = "EF00";
-              content = { type = "filesystem"; format = "vfat"; mountpoint = "/boot"; };
-            };
-            root = {
-              size = "100%";
-              content = { type = "filesystem"; format = "ext4"; mountpoint = "/"; };
-            };
+      # Example NixOS configuration (for nixos-rebuild)
+      nixosConfigurations.nixos-vps = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [ (self.nixosModules.default { inherit sshPubKey; }) ];
+      };
+
+      # Dev shell
+      devShells = forAllSystems (system:
+        let pkgs = nixpkgs.legacyPackages.${system};
+        in {
+          default = pkgs.mkShell {
+            packages = [ pkgs.opentofu pkgs.just ];
           };
-        };
+        });
+
+      # Pre-built Vultr image
+      packages.x86_64-linux.vultr-image = import ./packages/vultr-image.nix {
+        inherit nixos-generators sshPubKey;
       };
-
-      # Boot
-      boot.loader.systemd-boot.enable = true;
-      boot.loader.efi.canTouchEfiVariables = true;
-      boot.initrd.availableKernelModules = [ "virtio_pci" "virtio_blk" "virtio_scsi" "ahci" "sd_mod" ];
-
-      # Network
-      networking.hostName = hostname;
-      networking.useDHCP = true;
-      networking.firewall.allowedTCPPorts = [ 22 ];
-
-      # Users - SSH key only, no passwords
-      users.users.root.openssh.authorizedKeys.keys = [ sshPubKey ];
-      users.users.user = {
-        isNormalUser = true;
-        extraGroups = [ "wheel" ];
-        openssh.authorizedKeys.keys = [ sshPubKey ];
-      };
-
-      # SSH
-      services.openssh = {
-        enable = true;
-        settings.PermitRootLogin = "prohibit-password";
-        settings.PasswordAuthentication = false;
-      };
-
-      # Sudo without password
-      security.sudo.wheelNeedsPassword = false;
-
-      system.stateVersion = "25.11";
     };
-
-    nixosConfigurations.nixos-vps = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        (self.nixosModules.default {
-          sshPubKey = builtins.readFile ./assets/deploy-key.pub;
-        })
-      ];
-    };
-
-    devShells = forAllSystems (system:
-      let pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        default = pkgs.mkShell {
-          packages = [ pkgs.opentofu pkgs.just ];
-        };
-      });
-
-    # Pre-built Vultr image (raw-efi format)
-    packages.x86_64-linux.vultr-image = nixos-generators.nixosGenerate {
-      system = "x86_64-linux";
-      format = "raw-efi";
-      modules = [
-        ({ lib, ... }: {
-          # Boot
-          boot.loader.systemd-boot.enable = true;
-          boot.loader.efi.canTouchEfiVariables = true;
-          boot.initrd.availableKernelModules = [ "virtio_pci" "virtio_blk" "virtio_scsi" "ahci" "sd_mod" ];
-
-          # Network
-          networking.hostName = "nixos-vps";
-          networking.useDHCP = true;
-          networking.firewall.allowedTCPPorts = [ 22 ];
-
-          # Users - SSH key only
-          users.users.root.openssh.authorizedKeys.keys = [ (builtins.readFile ./assets/deploy-key.pub) ];
-
-          # SSH
-          services.openssh = {
-            enable = true;
-            settings.PermitRootLogin = "prohibit-password";
-            settings.PasswordAuthentication = false;
-          };
-
-          # Nix settings for rebuilds
-          nix.settings.experimental-features = [ "nix-command" "flakes" ];
-
-          system.stateVersion = "25.11";
-        })
-      ];
-    };
-  };
 }

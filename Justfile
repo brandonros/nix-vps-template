@@ -34,19 +34,6 @@ wait:
         sleep 5
     done
 
-# Install NixOS
-bootstrap:
-    #!/usr/bin/env bash
-    server_ip=$(just server-ip)
-    if ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; then
-        echo "Already NixOS"
-        exit 0
-    fi
-    nix run github:nix-community/nixos-anywhere -- \
-        --flake ".#nixos-vps" \
-        --target-host "root@${server_ip}" \
-        -i assets/deploy-key
-
 # SSH into server
 ssh:
     ssh -i assets/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip)"
@@ -55,8 +42,8 @@ ssh:
 destroy:
     cd terraform && tofu init -upgrade && tofu destroy
 
-# Full deploy: infra + NixOS
-go: deploy wait bootstrap wait rebuild
+# Full deploy: infra + rebuild
+go: deploy wait rebuild
     @echo "Ready: $(just server-ip)"
 
 # CI variants
@@ -66,7 +53,7 @@ ci-deploy:
 ci-destroy:
     cd terraform && tofu init -upgrade && tofu destroy -auto-approve
 
-ci-go: ci-deploy wait bootstrap wait rebuild
+ci-go: ci-deploy wait rebuild
     @echo "Ready: $(just server-ip)"
 
 # Rebuild NixOS on existing server (fetches flake from GitHub)

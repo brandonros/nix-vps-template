@@ -1,4 +1,4 @@
-# Vultr VPS module - reusable across projects
+# Vultr VPS with pre-built NixOS image
 
 terraform {
   encryption {
@@ -47,28 +47,22 @@ variable "enable_ipv6" {
   description = "Enable IPv6 on the instance"
 }
 
-variable "os_id" {
-  type        = number
-  default     = 2136
-  description = "Vultr OS ID (2136 = Debian 12 Bookworm)"
-}
-
-variable "ssh_public_key" {
+variable "nixos_image_url" {
   type        = string
-  description = "SSH public key content"
+  default     = "https://github.com/brandonros/nix-vps-template/releases/download/base/nixos-base.raw.xz"
+  description = "URL to NixOS base image"
 }
 
-resource "vultr_ssh_key" "default" {
-  name    = "${var.hostname}-key"
-  ssh_key = var.ssh_public_key
+# Create snapshot from pre-built NixOS image
+resource "vultr_snapshot_from_url" "nixos" {
+  url = var.nixos_image_url
 }
 
 resource "vultr_instance" "server" {
   plan        = var.plan
   region      = var.region
-  os_id       = var.os_id
+  snapshot_id = vultr_snapshot_from_url.nixos.id
   hostname    = var.hostname
-  ssh_key_ids = [vultr_ssh_key.default.id]
   enable_ipv6 = var.enable_ipv6
 }
 

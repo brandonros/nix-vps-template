@@ -31,8 +31,7 @@ jobs:
           mkdir -p assets
           echo "${{ secrets.DEPLOY_KEY }}" > assets/deploy-key
           chmod 600 assets/deploy-key
-          echo "TF_VAR_ssh_public_key=$(cat assets/deploy-key.pub)" >> $GITHUB_ENV
-      # create vm
+      # create vm from nixos snapshot
       - run: nix develop --command just ci-deploy
       - name: Commit state
         run: |
@@ -41,10 +40,6 @@ jobs:
           git add terraform/terraform.tfstate
           git diff --staged --quiet || git commit -m "Update terraform state"
           git push
-      # wait for ssh
-      - run: nix develop --command just wait
-      # convert from debian to nixos
-      - run: nix develop --command just bootstrap
       # wait for ssh
       - run: nix develop --command just wait
       # nixos-rebuild against target flake
