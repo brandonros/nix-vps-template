@@ -49,7 +49,7 @@ variable "enable_ipv6" {
 
 variable "nixos_image_url" {
   type        = string
-  default     = "https://github.com/brandonros/nix-vps-template/releases/download/base/nixos-base.raw"
+  default     = "https://github.com/brandonros/nix-vps-template/releases/download/base/nixos-base.raw.gz"
   description = "URL to NixOS base image"
 }
 

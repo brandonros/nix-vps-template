@@ -16,15 +16,15 @@ jobs:
       - name: Build image
         run: nix build .#vultr-image -L
 
-      - name: Prepare image
+      - name: Compress image
         run: |
           ls -la result/
           img=$(find result/ -name "*.img" -o -name "*.raw" | head -1)
-          cp "$img" nixos-base.raw
+          gzip -c "$img" > nixos-base.raw.gz
 
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create base --title "Base NixOS Image" --notes "Auto-generated NixOS base image for Vultr" || true
-          gh release upload base nixos-base.raw --clobber
+          gh release upload base nixos-base.raw.gz --clobber
