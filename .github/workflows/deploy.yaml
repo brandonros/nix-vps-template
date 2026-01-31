@@ -3,15 +3,14 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
-      repo:
-        description: 'GitHub repo'
-        default: 'brandonros/nix-vps-template'
-      flake:
-        description: 'Flake name'
+      deployment:
+        description: 'Deployment to deploy'
         default: 'default'
-      branch:
-        description: 'Branch (optional)'
-        default: ''
+        type: choice
+        options:
+          - default
+          - ez3proxy
+          - nixginx
 
 env:
   VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
@@ -26,21 +25,40 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
+
       - name: Setup SSH key
         run: |
           mkdir -p keys
           echo "${{ secrets.DEPLOY_KEY }}" > keys/deploy-key
           chmod 600 keys/deploy-key
-      # create vm from nixos snapshot
-      - run: nix develop --command just ci-deploy
-      - name: Commit state
+
+      # Select/create terraform workspace and deploy
+      - name: Deploy infrastructure
+        run: |
+          cd terraform
+          tofu init -upgrade
+          tofu workspace select -or-create ${{ inputs.deployment }}
+          tofu apply -auto-approve
+
+      # Write server IP to deployment config
+      - name: Write server config
+        run: |
+          IP=$(cd terraform && tofu output -raw server_ipv4)
+          mkdir -p deployments/${{ inputs.deployment }}
+          echo "{\"ip\": \"$IP\"}" > deployments/${{ inputs.deployment }}/server.json
+          echo "Server IP: $IP"
+
+      # Commit state + server config
+      - name: Commit state and config
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add terraform/terraform.tfstate
-          git diff --staged --quiet || git commit -m "Update terraform state"
+          git add terraform/ deployments/${{ inputs.deployment }}/server.json
+          git diff --staged --quiet || git commit -m "Deploy ${{ inputs.deployment }}: update state and server config"
           git push
-      # wait for ssh
-      - run: nix develop --command just wait
-      # nixos-rebuild against target flake
-      - run: nix develop --command just rebuild '${{ inputs.repo }}' '${{ inputs.flake }}' '${{ inputs.branch }}'
+
+      # Wait for NixOS
+      - run: nix develop --command just wait ${{ inputs.deployment }}
+
+      # Rebuild with deployment config
+      - run: nix develop --command just rebuild ${{ inputs.deployment }}

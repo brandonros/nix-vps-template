@@ -1,0 +1,282 @@
+# Architecture: Monorepo NixOS VPS Deployments
+
+This repo is a **monorepo** containing multiple NixOS VPS deployments. Each deployment lives in `deployments/<name>/` and shares common infrastructure (Terraform, CI/CD, base modules).
+
+## Repository Structure
+
+```
+nix-vps-template/
+├── flake.nix                    # Exports all nixosConfigurations
+├── modules/                     # Base NixOS modules (shared)
+│   ├── default.nix              # Imports hardware + runtime
+│   ├── hardware.nix             # Vultr disk/bootloader config
+│   └── runtime.nix              # SSH, firewall, nix settings
+├── deployments/                 # Per-deployment configurations
+│   ├── default/
+│   │   └── default.nix          # Minimal VPS config
+│   ├── ez3proxy/
+│   │   ├── default.nix          # Main config
+│   │   ├── 3proxy.nix           # Proxy module
+│   │   ├── server.json          # Generated: {"ip": "..."}
+│   │   └── openvpn/             # VPN configs
+│   └── nixginx/
+│       ├── default.nix          # nginx + ACME config
+│       └── server.json          # Generated: {"ip": "..."}
+├── terraform/                   # Infrastructure (workspaces)
+│   ├── main.tf
+│   ├── terraform.tfstate        # default workspace
+│   └── terraform.tfstate.d/     # other workspaces
+│       ├── ez3proxy/
+│       └── nixginx/
+├── keys/
+│   └── deploy-key.pub           # Shared SSH key
+├── Justfile                     # Task runner
+└── .github/workflows/
+    ├── deploy.yaml              # Deploy workflow
+    └── destroy.yaml             # Destroy workflow
+```
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    GitHub Actions Workflow                   │
+│                      (deploy.yaml)                           │
+│                                                              │
+│  Input: deployment = "nixginx"                              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  1. Terraform (workspace)                    │
+│                                                              │
+│   tofu workspace select -or-create nixginx                  │
+│   tofu apply                                                │
+│                                                              │
+│   Creates Vultr VPS, outputs server IP                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   2. Write server.json                       │
+│                                                              │
+│   echo '{"ip": "1.2.3.4"}' > deployments/nixginx/server.json│
+│   git commit + push                                         │
+│                                                              │
+│   IP is now in the repo (pure, reproducible)                │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   3. nixos-rebuild                           │
+│                                                              │
+│   SSH to server:                                            │
+│   nixos-rebuild switch --flake                              │
+│     github:brandonros/nix-vps-template#nixginx              │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    4. Modules Compose                        │
+│                                                              │
+│   flake.nix resolves nixosConfigurations.nixginx:           │
+│                                                              │
+│   Layer 1 (base):   ./modules (hardware, SSH, firewall)     │
+│   Layer 2 (deploy): ./deployments/nixginx/default.nix       │
+│                     └─ reads server.json for IP             │
+│                     └─ configures nginx + ACME              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Key Design Decisions
+
+### Monorepo vs Multi-Repo
+
+**Previous approach:** Separate repos (ez3proxy, nixginx) consumed nix-vps-template as a flake input.
+
+**Current approach:** Single repo with `deployments/` folder.
+
+| Aspect | Multi-Repo | Monorepo |
+|--------|------------|----------|
+| IP handling | Needed `--impure` or manual update | Pure: IP in `server.json` |
+| CI/CD | Cross-repo auth complexity | Single repo, simple |
+| State isolation | Separate tfstate per repo | Terraform workspaces |
+| Code sharing | Via flake inputs | Direct imports |
+
+### server.json Pattern
+
+Each deployment has a `server.json` file:
+
+```json
+{"ip": "149.28.123.45"}
+```
+
+- **Generated by CI** after Terraform provisions the VM
+- **Committed to git** alongside terraform state
+- **Read at Nix eval time** by the deployment config:
+
+```nix
+let
+  server = builtins.fromJSON (builtins.readFile ./server.json);
+in {
+  services.nginx.virtualHosts.${server.ip} = { ... };
+  security.acme.certs.${server.ip} = { ... };
+}
+```
+
+This keeps builds **pure** (no `--impure` flag needed) while still supporting dynamic IPs.
+
+### Terraform Workspaces
+
+Each deployment gets its own Terraform workspace:
+
+```bash
+tofu workspace select -or-create nixginx
+tofu apply
+```
+
+State files are stored separately:
+- `terraform.tfstate` → default workspace
+- `terraform.tfstate.d/nixginx/terraform.tfstate` → nixginx workspace
+- `terraform.tfstate.d/ez3proxy/terraform.tfstate` → ez3proxy workspace
+
+This allows **multiple VMs to coexist** (one per deployment).
+
+## Deployments
+
+### default
+
+Minimal NixOS VPS. Just SSH access, nothing else.
+
+```nix
+# deployments/default/default.nix
+{
+  vps.sshPubKey = builtins.readFile ../../keys/deploy-key.pub;
+  vps.hostname = "default";
+}
+```
+
+### ez3proxy
+
+3proxy HTTP/SOCKS5 proxy routed through OpenVPN in a network namespace.
+
+```nix
+# deployments/ez3proxy/default.nix
+{
+  imports = [ ./3proxy.nix ];
+
+  proxy.users = [ "users testuser:CL:testpass123" ];
+  proxy.vpn = {
+    enable = true;
+    configFile = ./openvpn/us6761.nordvpn.com.tcp.ovpn;
+  };
+}
+```
+
+### nixginx
+
+nginx with Let's Encrypt **IP-based** SSL certificate (shortlived profile).
+
+```nix
+# deployments/nixginx/default.nix
+let
+  server = builtins.fromJSON (builtins.readFile ./server.json);
+in {
+  services.nginx.virtualHosts.${server.ip} = {
+    forceSSL = true;
+    enableACME = true;
+  };
+
+  security.acme.certs.${server.ip}.profile = "shortlived";
+}
+```
+
+Uses Let's Encrypt's new IP certificate support (6-day validity, auto-renewed).
+
+## Local Development
+
+```bash
+# Enter dev shell
+nix develop
+
+# Deploy a specific deployment
+just go nixginx
+
+# Or step by step:
+just deploy nixginx    # Terraform
+just wait nixginx      # Wait for NixOS
+just write-config nixginx  # Write server.json locally
+just rebuild nixginx   # nixos-rebuild
+
+# SSH in
+just ssh nixginx
+
+# Destroy
+just destroy nixginx
+```
+
+## Adding a New Deployment
+
+1. Create the folder:
+   ```bash
+   mkdir -p deployments/myapp
+   ```
+
+2. Create `deployments/myapp/default.nix`:
+   ```nix
+   { lib, ... }:
+   let
+     server = builtins.fromJSON (builtins.readFile ./server.json);
+   in {
+     vps.sshPubKey = builtins.readFile ../../keys/deploy-key.pub;
+     vps.hostname = "myapp";
+
+     # Your config here
+   }
+   ```
+
+3. Create `deployments/myapp/server.json`:
+   ```json
+   {"ip": "0.0.0.0"}
+   ```
+
+4. Add to `flake.nix`:
+   ```nix
+   nixosConfigurations = {
+     default  = mkDeployment "default";
+     ez3proxy = mkDeployment "ez3proxy";
+     nixginx  = mkDeployment "nixginx";
+     myapp    = mkDeployment "myapp";  # ← add this
+   };
+   ```
+
+5. Add to `.github/workflows/deploy.yaml` and `destroy.yaml`:
+   ```yaml
+   options:
+     - default
+     - ez3proxy
+     - nixginx
+     - myapp  # ← add this
+   ```
+
+6. Verify:
+   ```bash
+   git add deployments/myapp
+   nix flake check
+   ```
+
+## Base Module Options
+
+The shared module (`./modules`) provides:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `vps.sshPubKey` | string | (required) | SSH public key for access |
+| `vps.hostname` | string | `"nixos-vps"` | Server hostname |
+
+All deployments inherit:
+- Vultr hardware config (disks, bootloader)
+- SSH server with key-only auth
+- Firewall (port 22 open by default)
+- Nix flakes enabled
+- zram swap
