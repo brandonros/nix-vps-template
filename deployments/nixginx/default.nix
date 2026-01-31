@@ -20,7 +20,10 @@ in {
   security.acme = {
     acceptTerms = true;
     defaults.email = "ceyami6672@1200b.com";
-    certs.${server.ip}.profile = "shortlived";
+    certs.${server.ip} = {
+      profile = "shortlived";
+      extraLegoRunFlags = [ "--disable-cn" ];
+    };
   };
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
