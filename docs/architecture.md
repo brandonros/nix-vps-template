@@ -7,10 +7,8 @@ This repo is a **monorepo** containing multiple NixOS VPS deployments. Each depl
 ```
 nix-vps-template/
 ├── flake.nix                    # Exports all nixosConfigurations
-├── modules/                     # Base NixOS modules (shared)
-│   ├── default.nix              # Imports hardware + runtime
-│   ├── hardware.nix             # Vultr disk/bootloader config
-│   └── runtime.nix              # SSH, firewall, nix settings
+├── modules/
+│   └── default.nix              # KVM VPS module (boot, disks, SSH, users)
 ├── deployments/                 # Per-deployment configurations
 │   ├── default/
 │   │   └── default.nix          # Minimal VPS config
@@ -303,7 +301,7 @@ The shared module (`./modules`) provides:
 | `vps.hostname` | string | `"nixos-vps"` | Server hostname |
 
 All deployments inherit:
-- Vultr hardware config (disks, bootloader)
+- KVM guest config (disks, bootloader, virtio)
 - SSH server with key-only auth
 - Firewall (port 22 open by default)
 - Nix flakes enabled
