@@ -1,5 +1,6 @@
 .DS_Store
-.just-base.just
 keys/deploy-key
-.terraform/
-.terraform.tfstate.lock.info
+terraform/.terraform/
+terraform/*.tfstate.backup
+terraform/*.tfvars
+!terraform/*.tfvars.example

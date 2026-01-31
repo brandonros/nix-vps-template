@@ -57,10 +57,10 @@ rebuild deployment="default":
         "nixos-rebuild switch --refresh --flake github:brandonros/nix-vps-template#{{deployment}}"
 
 # Full deploy cycle for a deployment
-go deployment="default": (deploy deployment) (wait deployment) (rebuild deployment)
+go deployment="default": (deploy deployment) (write-config deployment) (wait deployment) (rebuild deployment)
     @echo "Ready: $(just server-ip {{deployment}})"
 
-ci-go deployment="default": (ci-deploy deployment) (wait deployment) (rebuild deployment)
+ci-go deployment="default": (ci-deploy deployment) (write-config deployment) (wait deployment) (rebuild deployment)
     @echo "Ready: $(just server-ip {{deployment}})"
 
 # Write server.json for a deployment (for local use)
