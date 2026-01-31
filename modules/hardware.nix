@@ -5,6 +5,7 @@
   boot.loader.grub = {
     efiSupport = true;
     efiInstallAsRemovable = true;
+    efiSysMountPoint = "/boot/efi";
     device = "nodev";
   };
 
@@ -18,13 +19,13 @@
   ];
   boot.tmp.cleanOnBoot = true;
 
-  # Vultr standard layout: vda1=EFI, vda2=root
+  # Standard cloud VPS layout: vda1=EFI, vda2=root
   fileSystems."/" = {
     device = "/dev/vda2";
     fsType = "ext4";
   };
 
-  fileSystems."/boot" = {
+  fileSystems."/boot/efi" = {
     device = "/dev/vda1";
     fsType = "vfat";
   };
