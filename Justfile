@@ -44,9 +44,10 @@ ssh deployment="default":
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}"
 
-# Destroy a deployment (also removes workspace)
+# Destroy a deployment (also removes workspace and server.json)
 destroy deployment="default":
     cd terraform && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
+    rm -f deployments/{{deployment}}/server.json
 
 # Rebuild NixOS on a deployment's server
 rebuild deployment="default":
