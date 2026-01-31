@@ -22,7 +22,7 @@ server-ip deployment="default":
 
 # Deploy infrastructure for a deployment
 deploy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select -or-create {{deployment}} && tofu apply
+    cd terraform && tofu init -upgrade && tofu workspace select -or-create {{deployment}} && tofu apply -auto-approve
 
 # Wait for NixOS on a deployment
 wait deployment="default":
@@ -44,16 +44,9 @@ ssh deployment="default":
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}"
 
-# Destroy a deployment
+# Destroy a deployment (also removes workspace)
 destroy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy
-
-# CI variants
-ci-deploy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select -or-create {{deployment}} && tofu apply -auto-approve
-
-ci-destroy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve
+    cd terraform && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
 
 # Rebuild NixOS on a deployment's server
 rebuild deployment="default":
@@ -66,9 +59,6 @@ rebuild deployment="default":
 
 # Full deploy cycle for a deployment
 go deployment="default": (deploy deployment) (write-config deployment) (wait deployment) (rebuild deployment)
-    @echo "Ready: $(just server-ip {{deployment}})"
-
-ci-go deployment="default": (ci-deploy deployment) (write-config deployment) (wait deployment) (rebuild deployment)
     @echo "Ready: $(just server-ip {{deployment}})"
 
 # Write server.json for a deployment (for local use)
