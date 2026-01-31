@@ -11,6 +11,7 @@ on:
           - default
           - ez3proxy
           - nixginx
+          - k3s
 
 env:
   VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
@@ -32,21 +33,11 @@ jobs:
           echo "${{ secrets.DEPLOY_KEY }}" > keys/deploy-key
           chmod 600 keys/deploy-key
 
-      # Select/create terraform workspace and deploy
-      - name: Deploy infrastructure
-        run: |
-          cd terraform
-          tofu init -upgrade
-          tofu workspace select -or-create ${{ inputs.deployment }}
-          tofu apply -auto-approve
+      # Deploy infrastructure
+      - run: nix develop --command just deploy ${{ inputs.deployment }}
 
       # Write server IP to deployment config
-      - name: Write server config
-        run: |
-          IP=$(cd terraform && tofu output -raw server_ipv4)
-          mkdir -p deployments/${{ inputs.deployment }}
-          echo "{\"ip\": \"$IP\"}" > deployments/${{ inputs.deployment }}/server.json
-          echo "Server IP: $IP"
+      - run: nix develop --command just write-config ${{ inputs.deployment }}
 
       # Commit state + server config
       - name: Commit state and config

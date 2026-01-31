@@ -19,15 +19,19 @@ nix-vps-template/
 │   │   ├── 3proxy.nix           # Proxy module
 │   │   ├── server.json          # Generated: {"ip": "..."}
 │   │   └── openvpn/             # VPN configs
-│   └── nixginx/
-│       ├── default.nix          # nginx + ACME config
-│       └── server.json          # Generated: {"ip": "..."}
+│   ├── nixginx/
+│   │   ├── default.nix          # nginx + ACME config
+│   │   └── server.json          # Generated: {"ip": "..."}
+│   └── k3s/
+│       ├── default.nix          # k3s server config
+│       └── manifests/           # Kubernetes manifests
 ├── terraform/                   # Infrastructure (workspaces)
 │   ├── main.tf
 │   ├── terraform.tfstate        # default workspace
 │   └── terraform.tfstate.d/     # other workspaces
 │       ├── ez3proxy/
-│       └── nixginx/
+│       ├── nixginx/
+│       └── k3s/
 ├── keys/
 │   └── deploy-key.pub           # Shared SSH key
 ├── Justfile                     # Task runner
@@ -193,6 +197,28 @@ in {
 
 Uses Let's Encrypt's new IP certificate support (6-day validity, auto-renewed).
 
+### k3s
+
+Lightweight Kubernetes (k3s) single-node cluster with auto-deployed manifests.
+
+```nix
+# deployments/k3s/default.nix
+{
+  services.k3s = {
+    enable = true;
+    role = "server";
+    manifests = {
+      hello-nginx.source = ./manifests/hello-nginx.yaml;
+    };
+  };
+
+  networking.firewall.allowedTCPPorts = [ 6443 80 443 ];
+  environment.systemPackages = [ pkgs.kubectl ];
+}
+```
+
+Manifests in `manifests/` are auto-applied on boot via NixOS k3s module.
+
 ## Local Development
 
 ```bash
@@ -246,6 +272,7 @@ just destroy nixginx
      default  = mkDeployment "default";
      ez3proxy = mkDeployment "ez3proxy";
      nixginx  = mkDeployment "nixginx";
+     k3s      = mkDeployment "k3s";
      myapp    = mkDeployment "myapp";  # ← add this
    };
    ```
@@ -256,6 +283,7 @@ just destroy nixginx
      - default
      - ez3proxy
      - nixginx
+     - k3s
      - myapp  # ← add this
    ```
 
