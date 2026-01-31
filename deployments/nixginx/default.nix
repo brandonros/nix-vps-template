@@ -22,7 +22,8 @@ in {
     defaults.email = "ceyami6672@1200b.com";
     certs.${server.ip} = {
       profile = "shortlived";
-      extraLegoRunFlags = [ "--disable-cn" ];
+      # workaround: acme: error: 400 :: urn:ietf:params:acme:error:badCSR :: Error finalizing order :: CSR contains IP address in Common Name
+      extraLegoFlags = [ "--disable-cn" ];
     };
   };
 
