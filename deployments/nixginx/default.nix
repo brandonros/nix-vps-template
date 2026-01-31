@@ -23,6 +23,8 @@ in {
     certs.${server.ip}.profile = "shortlived";
   };
 
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
+
   system.activationScripts.createHelloWorld = lib.stringAfter [ "var" ] ''
     mkdir -p /var/www/hello
     cat > /var/www/hello/index.html << 'EOF'
