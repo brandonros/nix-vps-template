@@ -27,7 +27,9 @@ deploy deployment="default":
 # Wait for NixOS on a deployment
 wait deployment="default":
     #!/usr/bin/env bash
+    [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
     server_ip=$(just server-ip {{deployment}})
+    [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     echo "Waiting for NixOS on ${server_ip}..."
     while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; do
         sleep 5
@@ -36,7 +38,11 @@ wait deployment="default":
 
 # SSH into a deployment's server
 ssh deployment="default":
-    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@$(just server-ip {{deployment}})"
+    #!/usr/bin/env bash
+    [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
+    server_ip=$(just server-ip {{deployment}})
+    [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
+    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}"
 
 # Destroy a deployment
 destroy deployment="default":
@@ -52,7 +58,9 @@ ci-destroy deployment="default":
 # Rebuild NixOS on a deployment's server
 rebuild deployment="default":
     #!/usr/bin/env bash
+    [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
     server_ip=$(just server-ip {{deployment}})
+    [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:brandonros/nix-vps-template#{{deployment}}"
 
@@ -67,6 +75,7 @@ ci-go deployment="default": (ci-deploy deployment) (write-config deployment) (wa
 write-config deployment="default":
     #!/usr/bin/env bash
     IP=$(just server-ip {{deployment}})
+    [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     mkdir -p deployments/{{deployment}}
     echo "{\"ip\": \"$IP\"}" > deployments/{{deployment}}/server.json
     echo "Wrote deployments/{{deployment}}/server.json with IP: $IP"
