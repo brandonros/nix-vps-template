@@ -75,7 +75,7 @@ ci-go deployment="default": (ci-deploy deployment) (write-config deployment) (wa
 write-config deployment="default":
     #!/usr/bin/env bash
     IP=$(just server-ip {{deployment}})
-    [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
+    [[ -n "$IP" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     mkdir -p deployments/{{deployment}}
     echo "{\"ip\": \"$IP\"}" > deployments/{{deployment}}/server.json
     echo "Wrote deployments/{{deployment}}/server.json with IP: $IP"
