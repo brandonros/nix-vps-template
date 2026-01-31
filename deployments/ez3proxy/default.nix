@@ -1,7 +1,5 @@
 { config, lib, pkgs, ... }:
-let
-  server = builtins.fromJSON (builtins.readFile ./server.json);
-in {
+{
   vps.sshPubKey = builtins.readFile ../../keys/deploy-key.pub;
   vps.hostname = "ez3proxy";
 

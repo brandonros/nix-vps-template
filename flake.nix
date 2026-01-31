@@ -25,6 +25,7 @@
         default  = mkDeployment "default";
         ez3proxy = mkDeployment "ez3proxy";
         nixginx  = mkDeployment "nixginx";
+        k3s      = mkDeployment "k3s";
       };
 
       # Dev shell

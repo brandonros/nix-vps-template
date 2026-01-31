@@ -9,6 +9,7 @@ NixOS VPS deployments monorepo with Vultr infrastructure.
 | `default` | Minimal NixOS VPS |
 | `ez3proxy` | 3proxy HTTP/SOCKS5 over OpenVPN |
 | `nixginx` | nginx with Let's Encrypt IP certificate |
+| `k3s` | Single-node Kubernetes cluster |
 
 ## Quick Start
 
