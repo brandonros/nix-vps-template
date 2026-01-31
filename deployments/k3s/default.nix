@@ -9,7 +9,7 @@
     enable = true;
     role = "server";
     manifests = {
-      hello-nginx = ./manifests/hello-nginx.yaml;
+      hello-nginx.source = ./manifests/hello-nginx.yaml;
     };
   };
 
