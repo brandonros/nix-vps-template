@@ -8,6 +8,9 @@
   services.k3s = {
     enable = true;
     role = "server";
+    manifests = {
+      hello-nginx = ./manifests/hello-nginx.yaml;
+    };
   };
 
   environment.systemPackages = [ pkgs.kubectl ];
