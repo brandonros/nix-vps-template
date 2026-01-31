@@ -8,7 +8,7 @@ This repo is a **monorepo** containing multiple NixOS VPS deployments. Each depl
 nix-vps-template/
 ├── flake.nix                    # Exports all nixosConfigurations
 ├── modules/
-│   └── default.nix              # KVM VPS module (boot, disks, SSH, users)
+│   └── default.nix              # Base module (KVM guest, SSH, users, firewall)
 ├── deployments/                 # Per-deployment configurations
 │   ├── default/
 │   │   └── default.nix          # Minimal VPS config
@@ -55,7 +55,7 @@ nix-vps-template/
 │   tofu workspace select -or-create nixginx                  │
 │   tofu apply                                                │
 │                                                              │
-│   Creates Vultr VPS, outputs server IP                      │
+│   Creates VPS, outputs server IP                      │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -83,7 +83,7 @@ nix-vps-template/
 │                                                              │
 │   flake.nix resolves nixosConfigurations.nixginx:           │
 │                                                              │
-│   Layer 1 (base):   ./modules (hardware, SSH, firewall)     │
+│   Layer 1 (base):   ./modules (KVM guest, SSH, firewall)     │
 │   Layer 2 (deploy): ./deployments/nixginx/default.nix       │
 │                     └─ reads server.json for IP             │
 │                     └─ configures nginx + ACME              │

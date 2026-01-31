@@ -1,4 +1,4 @@
-# KVM VPS module (works with Vultr, DigitalOcean, Linode, Hetzner, etc.)
+# Base NixOS module for cloud VPS (KVM guest, SSH, users, firewall)
 { config, lib, modulesPath, ... }:
 
 with lib;
