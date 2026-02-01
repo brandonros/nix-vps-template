@@ -1,7 +1,36 @@
 { config, lib, pkgs, ... }:
 let
   server = builtins.fromJSON (builtins.readFile ./server.json);
-  webroot = ./assets;
+
+  # Build the frontend (vite -> dist/)
+  frontend = pkgs.buildNpmPackage {
+    pname = "nixginx-frontend";
+    version = "0.0.1";
+    src = ./.;
+    npmDepsHash = "sha256-VWIghIugSBkMDOB5ScJqwBC/WVYAVCUBmGwnwGgqzas=";
+    buildPhase = ''
+      npm run build --workspace=frontend
+    '';
+    installPhase = ''
+      mkdir -p $out
+      cp -r apps/frontend/dist/* $out/
+    '';
+  };
+
+  # Package the backend (no build, just need node_modules + source)
+  backend = pkgs.buildNpmPackage {
+    pname = "nixginx-backend";
+    version = "0.0.1";
+    src = ./.;
+    npmDepsHash = "sha256-VWIghIugSBkMDOB5ScJqwBC/WVYAVCUBmGwnwGgqzas=";
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p $out
+      cp -r node_modules $out/
+      cp -r apps/backend/* $out/
+      cp -r apps/shared $out/node_modules/
+    '';
+  };
 in {
   vps.provider = server.provider;
   vps.sshPubKey = builtins.readFile ../../keys/deploy-key.pub;
@@ -12,7 +41,25 @@ in {
     virtualHosts.${server.ip} = {
       forceSSL = true;
       enableACME = true;
-      locations."/".root = webroot;
+      locations."/" = {
+        root = frontend;
+        tryFiles = "$uri $uri/ /index.html"; # SPA fallback
+      };
+      locations."/api/" = {
+        proxyPass = "http://127.0.0.1:3000/"; # trailing slashes strip /api prefix
+      };
+    };
+  };
+
+  systemd.services.backend = {
+    description = "nixginx backend";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.nodejs}/bin/node ${backend}/src/index.js";
+      Restart = "always";
+      DynamicUser = true;
     };
   };
 
@@ -27,5 +74,4 @@ in {
   };
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
-
 }

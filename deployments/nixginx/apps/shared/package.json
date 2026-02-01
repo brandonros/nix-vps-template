@@ -1,0 +1,8 @@
+{
+  "name": "shared",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {}
+}
