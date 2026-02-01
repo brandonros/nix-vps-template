@@ -49,7 +49,7 @@ ssh deployment="default":
 # Destroy a deployment (resets server.json to placeholder)
 destroy deployment="default":
     cd terraform/{{provider}} && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
-    echo '{"ip": "0.0.0.0"}' > deployments/{{deployment}}/server.json
+    echo '{"ip": "0.0.0.0", "provider": "{{provider}}"}' > deployments/{{deployment}}/server.json
 
 # Rebuild NixOS on a deployment's server
 rebuild deployment="default":
@@ -70,5 +70,5 @@ write-config deployment="default":
     IP=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$IP" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     mkdir -p deployments/{{deployment}}
-    echo "{\"ip\": \"$IP\"}" > deployments/{{deployment}}/server.json
+    echo "{\"ip\": \"$IP\", \"provider\": \"{{provider}}\"}" > deployments/{{deployment}}/server.json
     echo "Wrote deployments/{{deployment}}/server.json with IP: $IP"

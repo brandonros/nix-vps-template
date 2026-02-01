@@ -3,10 +3,37 @@
 
 with lib;
 
+let
+  cfg = config.vps;
+
+  # Provider presets: maps provider -> { bootMode, disk, efiPartition }
+  providerPresets = {
+    vultr = {
+      bootMode = "efi";
+      disk = "/dev/vda";
+      rootPartition = "/dev/vda2";
+      efiPartition = "/dev/vda1";
+    };
+    hetzner = {
+      bootMode = "bios";
+      disk = "/dev/sda";
+      rootPartition = "/dev/sda1";
+      efiPartition = null;
+    };
+  };
+
+  preset = providerPresets.${cfg.provider};
+  isEfi = preset.bootMode == "efi";
+in
 {
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
 
   options.vps = {
+    provider = mkOption {
+      type = types.enum [ "vultr" "hetzner" ];
+      default = "vultr";
+      description = "Cloud provider (determines boot mode and disk layout)";
+    };
     sshPubKey = mkOption {
       type = types.str;
       description = "SSH public key for root and user access";
@@ -23,25 +50,26 @@ with lib;
     nix.settings.experimental-features = [ "nix-command" "flakes" ];
     system.stateVersion = "23.11";
 
-    # Boot
-    boot.loader.efi.efiSysMountPoint = "/boot/efi";
+    # Boot (provider-dependent)
+    boot.loader.efi.efiSysMountPoint = mkIf isEfi "/boot/efi";
     boot.loader.grub = {
-      efiSupport = true;
-      efiInstallAsRemovable = true;
-      device = "nodev";
+      enable = true;
+      efiSupport = isEfi;
+      efiInstallAsRemovable = isEfi;
+      device = if isEfi then "nodev" else preset.disk;
     };
+    boot.initrd.availableKernelModules = [
+      "ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi"  # From Hetzner hw-config
+    ];
     boot.initrd.kernelModules = [
       "virtio_pci" "virtio_blk" "virtio_scsi"   # KVM/QEMU
       "ahci" "sd_mod" "nvme"                    # Generic
-      "xen_blkfront"                            # Xen
-      "vmw_pvscsi"                              # VMware
-      "ata_piix" "uhci_hcd"                     # Legacy
     ];
     boot.tmp.cleanOnBoot = true;
 
-    # Disks (standard cloud VPS layout: vda1=EFI, vda2=root)
-    fileSystems."/" = { device = "/dev/vda2"; fsType = "ext4"; };
-    fileSystems."/boot/efi" = { device = "/dev/vda1"; fsType = "vfat"; };
+    # Disks (provider-dependent layout)
+    fileSystems."/" = { device = preset.rootPartition; fsType = "ext4"; };
+    fileSystems."/boot/efi" = mkIf isEfi { device = preset.efiPartition; fsType = "vfat"; };
     zramSwap.enable = true;
 
     # Network
