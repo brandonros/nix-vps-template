@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   server = builtins.fromJSON (builtins.readFile ./server.json);
+  webroot = ./assets;
 in {
   vps.provider = server.provider;
   vps.sshPubKey = builtins.readFile ../../keys/deploy-key.pub;
@@ -11,10 +12,7 @@ in {
     virtualHosts.${server.ip} = {
       forceSSL = true;
       enableACME = true;
-      locations."/" = {
-        root = "/var/www/hello";
-        index = "index.html";
-      };
+      locations."/".root = webroot;
     };
   };
 
@@ -30,17 +28,4 @@ in {
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 
-  system.activationScripts.createHelloWorld = lib.stringAfter [ "var" ] ''
-    mkdir -p /var/www/hello
-    cat > /var/www/hello/index.html << 'EOF'
-    <!DOCTYPE html>
-    <html>
-    <head><title>nixginx</title></head>
-    <body>
-      <h1>Hello, World!</h1>
-      <p>Served with nginx + Let's Encrypt IP certificate (shortlived profile)</p>
-    </body>
-    </html>
-    EOF
-  '';
 }
