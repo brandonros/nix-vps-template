@@ -27,6 +27,8 @@ let
     installPhase = ''
       mkdir -p $out
       cp -r node_modules $out/
+      # remove workspace symlinks (they point to ../apps/*)
+      rm -rf $out/node_modules/{shared,frontend,backend}
       cp -r apps/backend/* $out/
       cp -r apps/shared $out/node_modules/
     '';
