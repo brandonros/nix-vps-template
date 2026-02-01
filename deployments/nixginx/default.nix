@@ -61,7 +61,40 @@ in {
       Type = "simple";
       ExecStart = "${pkgs.nodejs}/bin/node ${backend}/src/index.js";
       Restart = "always";
+
+      # User isolation
       DynamicUser = true;
+      RemoveIPC = true;
+
+      # Filesystem isolation
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      PrivateTmp = true;
+      ReadOnlyPaths = [ "/" ];
+      UMask = "0077";
+
+      # Device/kernel/system isolation
+      PrivateDevices = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectControlGroups = true;
+      ProtectHostname = true;
+      ProtectClock = true;
+
+      # Privilege isolation
+      NoNewPrivileges = true;
+      CapabilityBoundingSet = "";
+      RestrictSUIDSGID = true;
+      RestrictRealtime = true;
+
+      # Execution restrictions
+      SystemCallArchitectures = "native";
+      RestrictNamespaces = true;
+      LockPersonality = true;
+
+      # Resource limits
+      MemoryMax = "256M";
+      CPUQuota = "100%";
     };
   };
 
