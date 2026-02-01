@@ -15,6 +15,17 @@ terraform {
       method = method.aes_gcm.main
     }
   }
+
+  required_providers {
+    vultr = {
+      source  = "vultr/vultr"
+      version = "~> 2.28"
+    }
+  }
+}
+
+provider "vultr" {
+  # VULTR_API_KEY comes from env var
 }
 
 variable "encryption_passphrase" {
@@ -47,10 +58,15 @@ variable "enable_ipv6" {
   description = "Enable IPv6 on the instance"
 }
 
-variable "os_id" {
-  type        = number
-  default     = 2136
-  description = "Vultr OS ID (2136 = Debian 12 Bookworm)"
+variable "image" {
+  type        = string
+  default     = "debian-12"
+  description = "OS image (debian-12, debian-13)"
+
+  validation {
+    condition     = contains(["debian-12", "debian-13"], var.image)
+    error_message = "Unsupported image. Supported: debian-12, debian-13"
+  }
 }
 
 variable "ssh_pubkey" {
@@ -60,16 +76,21 @@ variable "ssh_pubkey" {
 }
 
 locals {
-  ssh_pubkey = var.ssh_pubkey != "" ? var.ssh_pubkey : trimspace(file("${path.module}/../keys/deploy-key.pub"))
+  image_to_os_id = {
+    "debian-12" = 2136
+    "debian-13" = 2625
+  }
+  os_id      = local.image_to_os_id[var.image]
+  ssh_pubkey = var.ssh_pubkey != "" ? var.ssh_pubkey : trimspace(file("${path.module}/../../keys/deploy-key.pub"))
 }
 
 resource "vultr_instance" "server" {
   plan        = var.plan
   region      = var.region
-  os_id       = var.os_id
+  os_id       = local.os_id
   hostname    = var.hostname
   enable_ipv6 = var.enable_ipv6
-  user_data = templatefile("${path.module}/cloud-config.yaml.tpl", {
+  user_data = templatefile("${path.module}/../cloud-config.yaml.tpl", {
     ssh_pubkey = local.ssh_pubkey
   })
 }

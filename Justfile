@@ -2,6 +2,8 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+provider := "vultr"
+
 default:
     @just --list
 
@@ -18,11 +20,11 @@ keygen:
 
 # Get server IP for a deployment
 server-ip deployment="default":
-    @cd terraform && tofu workspace select {{deployment}} >/dev/null 2>&1 && tofu output -raw server_ipv4 2>/dev/null
+    @cd terraform/{{provider}} && tofu workspace select {{deployment}} >/dev/null 2>&1 && tofu output -raw server_ipv4 2>/dev/null
 
 # Deploy infrastructure for a deployment
 deploy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select -or-create {{deployment}} && tofu apply -auto-approve
+    cd terraform/{{provider}} && tofu init -upgrade && tofu workspace select -or-create {{deployment}} && tofu apply -auto-approve
 
 # Wait for NixOS on a deployment
 wait deployment="default":
@@ -46,7 +48,7 @@ ssh deployment="default":
 
 # Destroy a deployment (resets server.json to placeholder)
 destroy deployment="default":
-    cd terraform && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
+    cd terraform/{{provider}} && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
     echo '{"ip": "0.0.0.0"}' > deployments/{{deployment}}/server.json
 
 # Rebuild NixOS on a deployment's server
