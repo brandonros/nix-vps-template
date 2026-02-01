@@ -92,6 +92,10 @@ in {
       RestrictNamespaces = true;
       LockPersonality = true;
 
+      # Network isolation (inbound + outbound localhost only)
+      IPAddressDeny = "any";
+      IPAddressAllow = "localhost";
+
       # Resource limits
       MemoryMax = "256M";
       CPUQuota = "100%";
