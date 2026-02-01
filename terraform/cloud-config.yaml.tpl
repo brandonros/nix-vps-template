@@ -7,4 +7,5 @@ users:
       - ${ssh_pubkey}
 
 runcmd:
-  - curl -L https://github.com/elitak/nixos-infect/raw/master/nixos-infect | NIX_CHANNEL=nixos-25.11 bash 2>&1 | tee /var/log/nixos-infect.log
+  # Pinned to working commit - see https://github.com/elitak/nixos-infect/issues/255
+  - curl -L https://raw.githubusercontent.com/elitak/nixos-infect/36f48d8feb89ca508261d7390355144fc0048932/nixos-infect | NIX_CHANNEL=nixos-25.11 bash 2>&1 | tee /var/log/nixos-infect.log
