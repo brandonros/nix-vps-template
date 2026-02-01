@@ -3,6 +3,13 @@ name: Destroy
 on:
   workflow_dispatch:
     inputs:
+      provider:
+        description: 'Cloud provider'
+        default: 'vultr'
+        type: choice
+        options:
+          - vultr
+          - hetzner
       deployment:
         description: 'Deployment to destroy'
         default: 'default'
@@ -14,7 +21,8 @@ on:
           - k3s
 
 env:
-  VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
+  VULTR_API_KEY: ${{ inputs.provider == 'vultr' && secrets.VULTR_API_KEY || '' }}
+  HCLOUD_TOKEN: ${{ inputs.provider == 'hetzner' && secrets.HCLOUD_TOKEN || '' }}
   TF_VAR_encryption_passphrase: ${{ secrets.TF_ENCRYPTION_PASSPHRASE }}
 
 jobs:
@@ -34,12 +42,12 @@ jobs:
           chmod 600 keys/deploy-key
 
       # Destroy infrastructure (also removes workspace and server.json)
-      - run: nix develop --command just destroy ${{ inputs.deployment }}
+      - run: nix develop --command just provider=${{ inputs.provider }} destroy ${{ inputs.deployment }}
 
       - name: Commit state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add terraform/ deployments/${{ inputs.deployment }}/
-          git diff --staged --quiet || git commit -m "Destroy ${{ inputs.deployment }}: update state"
+          git diff --staged --quiet || git commit -m "Destroy ${{ inputs.deployment }} (${{ inputs.provider }}): update state"
           git push

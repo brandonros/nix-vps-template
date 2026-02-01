@@ -3,6 +3,13 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      provider:
+        description: 'Cloud provider'
+        default: 'vultr'
+        type: choice
+        options:
+          - vultr
+          - hetzner
       deployment:
         description: 'Deployment to deploy'
         default: 'default'
@@ -14,7 +21,8 @@ on:
           - k3s
 
 env:
-  VULTR_API_KEY: ${{ secrets.VULTR_API_KEY }}
+  VULTR_API_KEY: ${{ inputs.provider == 'vultr' && secrets.VULTR_API_KEY || '' }}
+  HCLOUD_TOKEN: ${{ inputs.provider == 'hetzner' && secrets.HCLOUD_TOKEN || '' }}
   TF_VAR_encryption_passphrase: ${{ secrets.TF_ENCRYPTION_PASSPHRASE }}
 
 jobs:
@@ -34,10 +42,10 @@ jobs:
           chmod 600 keys/deploy-key
 
       # Deploy infrastructure
-      - run: nix develop --command just deploy ${{ inputs.deployment }}
+      - run: nix develop --command just provider=${{ inputs.provider }} deploy ${{ inputs.deployment }}
 
       # Write server IP to deployment config
-      - run: nix develop --command just write-config ${{ inputs.deployment }}
+      - run: nix develop --command just provider=${{ inputs.provider }} write-config ${{ inputs.deployment }}
 
       # Commit state + server config
       - name: Commit state and config
@@ -45,11 +53,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add terraform/ deployments/${{ inputs.deployment }}/server.json
-          git diff --staged --quiet || git commit -m "Deploy ${{ inputs.deployment }}: update state and server config"
+          git diff --staged --quiet || git commit -m "Deploy ${{ inputs.deployment }} (${{ inputs.provider }}): update state and server config"
           git push
 
       # Wait for NixOS
-      - run: nix develop --command just wait ${{ inputs.deployment }}
+      - run: nix develop --command just provider=${{ inputs.provider }} wait ${{ inputs.deployment }}
 
       # Rebuild with deployment config
-      - run: nix develop --command just rebuild ${{ inputs.deployment }}
+      - run: nix develop --command just provider=${{ inputs.provider }} rebuild ${{ inputs.deployment }}
