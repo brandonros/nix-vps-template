@@ -58,12 +58,12 @@ in
       efiInstallAsRemovable = isEfi;
       device = if isEfi then "nodev" else preset.disk;
     };
-    boot.initrd.availableKernelModules = [
-      "ata_piix" "uhci_hcd" "xen_blkfront" "vmw_pvscsi"  # From Hetzner hw-config
-    ];
     boot.initrd.kernelModules = [
       "virtio_pci" "virtio_blk" "virtio_scsi"   # KVM/QEMU
       "ahci" "sd_mod" "nvme"                    # Generic
+      "xen_blkfront"                            # Xen
+      "vmw_pvscsi"                              # VMware
+      "ata_piix" "uhci_hcd"                     # Legacy
     ];
     boot.tmp.cleanOnBoot = true;
 
