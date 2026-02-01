@@ -30,7 +30,7 @@ deploy deployment="default":
 wait deployment="default":
     #!/usr/bin/env bash
     [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
-    server_ip=$(just server-ip {{deployment}})
+    server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     echo "Waiting for NixOS on ${server_ip}..."
     while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; do
@@ -42,7 +42,7 @@ wait deployment="default":
 ssh deployment="default":
     #!/usr/bin/env bash
     [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
-    server_ip=$(just server-ip {{deployment}})
+    server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}"
 
@@ -55,19 +55,19 @@ destroy deployment="default":
 rebuild deployment="default":
     #!/usr/bin/env bash
     [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
-    server_ip=$(just server-ip {{deployment}})
+    server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:brandonros/nix-vps-template#{{deployment}}"
 
 # Full deploy cycle for a deployment
 go deployment="default": (deploy deployment) (write-config deployment) (wait deployment) (rebuild deployment)
-    @echo "Ready: $(just server-ip {{deployment}})"
+    @echo "Ready: $(just provider={{provider}} server-ip {{deployment}})"
 
 # Write server.json for a deployment (for local use)
 write-config deployment="default":
     #!/usr/bin/env bash
-    IP=$(just server-ip {{deployment}})
+    IP=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$IP" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     mkdir -p deployments/{{deployment}}
     echo "{\"ip\": \"$IP\"}" > deployments/{{deployment}}/server.json
