@@ -14,11 +14,11 @@ NixOS VPS deployments monorepo with Vultr infrastructure.
 ## Quick Start
 
 ```bash
-nix develop
-just keygen              # generate SSH key (one-time)
-just go nixginx          # deploy nixginx (infra + wait + rebuild)
-just ssh nixginx         # connect
-just destroy nixginx     # tear down
+nix develop                             # enter dev shell
+just keygen                             # generate SSH key (one-time)
+just provider=vultr go nixginx          # deploy nixginx (infra + wait + rebuild)
+just provider=vultr ssh nixginx         # connect
+just provider=vultr destroy nixginx     # tear down
 ```
 
 ## Commands
