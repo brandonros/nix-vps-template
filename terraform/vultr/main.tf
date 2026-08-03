@@ -75,6 +75,12 @@ variable "ssh_pubkey" {
   description = "SSH public key (defaults to keys/deploy-key.pub)"
 }
 
+variable "nix_channel" {
+  type        = string
+  default     = "nixos-26.05"
+  description = "NixOS channel nixos-infect installs (should match flake.nix nixpkgs)"
+}
+
 locals {
   image_to_os_id = {
     "debian-12" = 2136
@@ -91,7 +97,9 @@ resource "vultr_instance" "server" {
   hostname    = var.hostname
   enable_ipv6 = var.enable_ipv6
   user_data = templatefile("${path.module}/../cloud-config.yaml.tpl", {
-    ssh_pubkey = local.ssh_pubkey
+    ssh_pubkey      = local.ssh_pubkey
+    nix_channel     = var.nix_channel
+    infect_provider = ""
   })
 }
 

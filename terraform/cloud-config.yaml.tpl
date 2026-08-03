@@ -7,5 +7,6 @@ users:
       - ${ssh_pubkey}
 
 runcmd:
-  # Pinned to working commit - see https://github.com/elitak/nixos-infect/issues/255
-  - curl -L https://raw.githubusercontent.com/elitak/nixos-infect/36f48d8feb89ca508261d7390355144fc0048932/nixos-infect | NIX_CHANNEL=nixos-25.11 bash 2>&1 | tee /var/log/nixos-infect.log
+  # dramforever/nixos-infect@disable-systemd-initrd - scripted initrd is required for lustration on 26.05
+  # PROVIDER is set explicitly - upstream autodetection is a no-op (broken -v guard, elitak@d54398b)
+  - curl -L https://raw.githubusercontent.com/dramforever/nixos-infect/9607bd36bad2859794163e0b64dc435328bb5441/nixos-infect | PROVIDER=${infect_provider} NIX_CHANNEL=${nix_channel} bash 2>&1 | tee /var/log/nixos-infect.log
