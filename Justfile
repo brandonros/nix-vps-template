@@ -3,6 +3,8 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 provider := "vultr"
+ssh_opts := "-i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+ssh_probe := ssh_opts + " -o ConnectTimeout=5 -o BatchMode=yes"
 
 default:
     @just --list
@@ -33,7 +35,7 @@ wait deployment="default":
     server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
     echo "Waiting for NixOS on ${server_ip}..."
-    while ! ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -o BatchMode=yes "root@${server_ip}" 'test -f /etc/NIXOS' 2>/dev/null; do
+    while ! ssh {{ssh_probe}} "root@${server_ip}" 'test -e /run/current-system' 2>/dev/null; do
         sleep 5
     done
     echo "NixOS ready"
@@ -44,7 +46,7 @@ ssh deployment="default":
     [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
     server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
-    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}"
+    ssh {{ssh_opts}} "root@${server_ip}"
 
 # Destroy a deployment (resets server.json to placeholder)
 destroy deployment="default":
@@ -57,7 +59,7 @@ rebuild deployment="default":
     [[ -f keys/deploy-key ]] || { echo "Missing keys/deploy-key - run 'just keygen'"; exit 1; }
     server_ip=$(just provider={{provider}} server-ip {{deployment}})
     [[ -n "$server_ip" ]] || { echo "No server IP - is infrastructure deployed?"; exit 1; }
-    ssh -i keys/deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${server_ip}" \
+    ssh {{ssh_opts}} "root@${server_ip}" \
         "nixos-rebuild switch --refresh --flake github:brandonros/nix-vps-template#{{deployment}}"
 
 # Full deploy cycle for a deployment
