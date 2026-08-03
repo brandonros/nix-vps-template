@@ -50,7 +50,16 @@ ssh deployment="default":
 
 # Destroy a deployment (resets server.json to placeholder)
 destroy deployment="default":
-    cd terraform/{{provider}} && tofu init -upgrade && tofu workspace select {{deployment}} && tofu destroy -auto-approve && tofu workspace select default && tofu workspace delete {{deployment}}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    pushd terraform/{{provider}} >/dev/null
+    tofu init -upgrade
+    tofu workspace select {{deployment}}
+    tofu destroy -auto-approve
+    tofu workspace select default
+    # "default" is tofu's built-in workspace and cannot be deleted
+    [[ "{{deployment}}" == "default" ]] || tofu workspace delete {{deployment}}
+    popd >/dev/null
     echo '{"ip": "0.0.0.0", "provider": "{{provider}}"}' > deployments/{{deployment}}/server.json
 
 # Rebuild NixOS on a deployment's server
