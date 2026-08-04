@@ -48,7 +48,12 @@ in
   config = {
     # Nix
     nix.settings.experimental-features = [ "nix-command" "flakes" ];
-    system.stateVersion = "23.11";
+    nix.settings.trusted-users = [ "root" "@wheel" ];
+    nix.settings.extra-substituters = [ "https://brandonros.cachix.org" ];
+    nix.settings.extra-trusted-public-keys = [
+      "brandonros.cachix.org-1:2VlkqIIKqlZ0oWyA4B+R8oa4lGf1YPJSrKnVnCtVjmU="
+    ];
+    system.stateVersion = "26.05";
 
     # Boot (provider-dependent)
     boot.loader.efi.efiSysMountPoint = mkIf isEfi "/boot/efi";

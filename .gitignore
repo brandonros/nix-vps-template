@@ -4,3 +4,4 @@ terraform/**/.terraform/
 terraform/**/*.tfvars
 !terraform/**/*.tfvars.example
 **/node_modules/
+.direnv/
